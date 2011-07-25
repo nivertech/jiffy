@@ -164,6 +164,8 @@ dec_string(Decoder* d, ERL_NIF_TERM* value)
 
     st = d->i;
 
+	if (d->i >= d->len) // handle dangerous input "\""
+		return 0;
     while(d->i < d->len) {
         if(d->u[d->i] < 0x20) {
             return 0;
