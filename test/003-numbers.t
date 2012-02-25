@@ -1,12 +1,12 @@
 #! /usr/bin/env escript
-% This file is part of Jiffy released under the MIT license. 
+% This file is part of Jiffy released under the MIT license.
 % See the LICENSE file for more information.
 
 main([]) ->
     code:add_pathz("ebin"),
     code:add_pathz("test"),
-    
-    etap:plan(57),
+
+    etap:plan(59),
     util:test_good(good()),
     util:test_errors(errors()),
     etap:end_tests().
@@ -19,6 +19,7 @@ good() ->
         {<<"12">>, 12},
         {<<"-3">>, -3},
         {<<"1234567890123456789012345">>, 1234567890123456789012345},
+        {<<"1310050760199">>, 1310050760199},
         {
             <<"1234567890123456789012345.0">>,
             1.23456789012345678e24,
@@ -30,9 +31,9 @@ good() ->
             <<"1.2345678901234568502e+27">>
         },
         {
-            <<"1234567890123456789012345E2">>,
-            123456789012345678901234500,
-            <<"123456789012345678901234500">>
+            <<"1234567890123456789012345012">>,
+            1234567890123456789012345012,
+            <<"1234567890123456789012345012">>
         },
         {
             <<"0.000000000000000000000000000000000001">>,

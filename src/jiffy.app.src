@@ -4,6 +4,5 @@
     {description, "JSON Decoder/Encoder"},
     {vsn, "0.1.0"},
     {registered, []},
-    %{mod, reloading, []},
     {applications, [kernel]}
 ]}.

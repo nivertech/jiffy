@@ -1,4 +1,4 @@
-// This file is part of Jiffy released under the MIT license. 
+// This file is part of Jiffy released under the MIT license.
 // See the LICENSE file for more information.
 
 #include "jiffy.h"
@@ -10,7 +10,7 @@ load(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
     if(st == NULL) {
         return 1;
     }
-    
+
     st->atom_ok = make_atom(env, "ok");
     st->atom_error = make_atom(env, "error");
     st->atom_null = make_atom(env, "null");
@@ -20,6 +20,8 @@ load(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
     st->atom_bignum_e = make_atom(env, "bignum_e");
     st->atom_bigdbl = make_atom(env, "bigdbl");
     st->atom_partial = make_atom(env, "partial");
+    st->atom_uescape = make_atom(env, "uescape");
+    st->atom_pretty = make_atom(env, "pretty");
 
     // Markers used in encoding
     st->ref_object = make_atom(env, "$object_ref$");
@@ -53,7 +55,7 @@ unload(ErlNifEnv* env, void* priv)
 static ErlNifFunc funcs[] =
 {
     {"nif_decode", 1, decode},
-    {"nif_encode", 1, encode}
+    {"nif_encode", 2, encode}
 };
 
 ERL_NIF_INIT(jiffy, funcs, &load, &reload, &upgrade, &unload);

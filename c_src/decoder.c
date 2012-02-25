@@ -1,4 +1,4 @@
-// This file is part of Jiffy released under the MIT license. 
+// This file is part of Jiffy released under the MIT license.
 // See the LICENSE file for more information.
 
 #include <assert.h>
@@ -76,7 +76,7 @@ dec_init(Decoder* d, ErlNifEnv* env, ERL_NIF_TERM arg, ErlNifBinary* bin)
     d->st_data = (char*) enif_alloc(STACK_SIZE_INC * sizeof(char));
     d->st_size = STACK_SIZE_INC;
     d->st_top = 0;
-    
+
     for(i = 0; i < d->st_size; i++) {
         d->st_data[i] = st_invalid;
     }
@@ -122,7 +122,7 @@ dec_push(Decoder* d, char val)
     int i;
 
     if(d->st_top >= d->st_size) {
-        new_sz = d->st_size + STACK_SIZE_INC; 
+        new_sz = d->st_size + STACK_SIZE_INC;
         tmp = (char*) enif_alloc(new_sz * sizeof(char));
         memcpy(tmp, d->st_data, d->st_size * sizeof(char));
         enif_free(d->st_data);
@@ -198,10 +198,10 @@ dec_string(Decoder* d, ERL_NIF_TERM* value)
                         return 0;
                     }
                     hi = int_from_hex(&(d->u[d->i]));
-                    d->i += 4;
                     if(hi < 0) {
                         return 0;
                     }
+                    d->i += 4;
                     if(hi >= 0xD800 && hi < 0xDC00) {
                         if(d->i + 6 >= d->len) {
                             return 0;
@@ -215,7 +215,7 @@ dec_string(Decoder* d, ERL_NIF_TERM* value)
                         if(lo < 0) {
                             return 0;
                         }
-                        hi = utf8_from_pair(hi, lo);
+                        hi = unicode_from_pair(hi, lo);
                         if(hi < 0) {
                             return 0;
                         }
@@ -236,56 +236,19 @@ dec_string(Decoder* d, ERL_NIF_TERM* value)
         } else if(d->u[d->i] < 0x80) {
             d->i++;
         } else {
-            ulen = -1;
-            if((d->u[d->i] & 0xE0) == 0xC0) {
-                ulen = 1;
-            } else if((d->u[d->i] & 0xF0) == 0xE0) {
-                ulen = 2;
-            } else if((d->u[d->i] & 0xF8) == 0xF0) {
-                ulen = 3;
-            } else if((d->u[d->i] & 0xFC) == 0xF8) {
-                ulen = 4;
-            } else if((d->u[d->i] & 0xFE) == 0xFC) {
-                ulen = 5;
-            }
+            ulen = utf8_validate(&(d->u[d->i]), d->len - d->i);
             if(ulen < 0) {
                 return 0;
             }
-            if(d->i + ulen >= d->len) {
-                return 0;
-            }
-            for(ui = 0; ui < ulen; ui++) {
-                if((d->u[d->i+1+ui] & 0xC0) != 0x80) {
-                    return 0;
-                }
-            }
-            // Wikipedia says I have to check that a UTF-8 encoding
-            // uses as few bits as possible. This means that we
-            // can't do things like encode 't' in three bytes.
-            // To check this all we need to ensure is that for each
-            // of the following bit patterns that there is at least
-            // one 1 bit in any of the x's
-            // 11: 110xxxxy 10yyyyyy
-            // 16: 1110xxxx 10xyyyyy 10yyyyyy
-            // 21: 11110xxx 10xxyyyy 10yyyyyy 10yyyyyy
-            // 26: 111110xx 10xxxyyy 10yyyyyy 10yyyyyy 10yyyyyy
-            // 31: 1111110x 10xxxxyy 10yyyyyy 10yyyyyy 10yyyyyy 10yyyyyy
-            if(ulen == 1) {
-                if((d->u[d->i] & 0x1E) == 0) return 0;
-            } else if(ulen == 2) {
-                if((d->u[d->i] & 0x0F) + (d->u[d->i+1] & 0x20) == 0) return 0;
-            } else if(ulen == 3) {
-                if((d->u[d->i] & 0x07) + (d->u[d->i+1] & 0x30) == 0) return 0;
-            } else if(ulen == 4) {
-                if((d->u[d->i] & 0x03) + (d->u[d->i+1] & 0x38) == 0) return 0;
-            } else if(ulen == 5) {
-                if((d->u[d->i] & 0x01) + (d->u[d->i+1] & 0x3C) == 0) return 0;
-            }
-            d->i += 1 + ulen;
+            d->i += ulen;
         }
     }
 
 parse:
+    if(d->p[d->i-1] != '\"') {
+        return 0;
+    }
+
     if(!has_escape) {
         *value = enif_make_sub_binary(d->env, d->arg, st, (d->i - st - 1));
         return 1;
@@ -334,14 +297,20 @@ parse:
             case 'u':
                 ui++;
                 hi = int_from_hex(&(d->u[ui]));
+                if(hi < 0) {
+                    return 0;
+                }
                 if(hi >= 0xD800 && hi < 0xDC00) {
                     lo = int_from_hex(&(d->u[ui+6]));
-                    hi = utf8_from_pair(hi, lo);
+                    if(lo < 0) {
+                        return 0;
+                    }
+                    hi = unicode_from_pair(hi, lo);
                     ui += 10;
                 } else {
                     ui += 4;
                 }
-                hi = utf8_to_binary(hi, (unsigned char*) chrbuf+chrpos);
+                hi = unicode_to_utf8(hi, (unsigned char*) chrbuf+chrpos);
                 if(hi < 0) {
                     return 0;
                 }
@@ -556,7 +525,7 @@ dec_number(Decoder* d, ERL_NIF_TERM* value)
     }
 
 parse:
-    
+
     switch(state) {
         case nst_init:
         case nst_sign:
@@ -587,7 +556,7 @@ parse:
             }
         }
     }
-    
+
     if(!has_frac && !has_exp) {
         num_type = d->atoms->atom_bignum;
     } else if(has_exp) {
@@ -637,7 +606,7 @@ decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     Decoder dec;
     Decoder* d = &dec;
-    
+
     ErlNifBinary bin;
 
     ERL_NIF_TERM objs = enif_make_list(env, 0);
@@ -772,7 +741,7 @@ decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                     curr = enif_make_list_cell(env, val, curr);
                 }
                 break;
-            
+
             case st_key:
                 switch(d->p[d->i]) {
                     case ' ':
@@ -932,7 +901,7 @@ decode(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     } else if(d->is_partial) {
         ret = enif_make_tuple2(env, d->atoms->atom_partial, val);
     } else {
-        ret = enif_make_tuple2(env, d->atoms->atom_ok, val);
+        ret = val;
     }
 
 done:
