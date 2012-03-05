@@ -81,9 +81,9 @@ finish_encode(_, _) ->
 
 
 init() ->
-    PrivDir = case code:priv_dir(?MODULE) of
+    PrivDir = case code:priv_dir(ejabberd) of
         {error, _} ->
-            EbinDir = filename:dirname(code:which(?MODULE)),
+            EbinDir = filename:dirname(code:which(ejabberd)),
             AppPath = filename:dirname(EbinDir),
             filename:join(AppPath, "priv");
         Path ->
