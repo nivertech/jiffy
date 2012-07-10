@@ -20,6 +20,10 @@ do {                                \
     }                               \
 } while(0)
 
+#if WINDOWS || WIN32
+#define inline __inline
+#define snprintf  _snprintf
+#endif
 
 typedef struct {
     ErlNifEnv*      env;
@@ -77,6 +81,8 @@ enc_init(Encoder* e, ErlNifEnv* env, ERL_NIF_TERM opts, ErlNifBinary* bin)
             e->uescape = 1;
         } else if(enif_compare(val, e->atoms->atom_pretty) == 0) {
             e->pretty = 1;
+        } else if(enif_compare(val, e->atoms->atom_force_utf8) == 0) {
+            // Ignore, handled in Erlang
         } else {
             return 0;
         }
@@ -274,7 +280,7 @@ enc_string(Encoder* e, ERL_NIF_TERM val)
                     if(uval < 0) {
                         return 0;
                     }
-                    esc_extra = utf8_esc_len(uval);
+                    esc_extra += utf8_esc_len(uval);
                     if(ulen < 0) {
                         return 0;
                     }
