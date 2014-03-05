@@ -248,11 +248,12 @@ dec_string(Decoder* d, ERL_NIF_TERM* value)
         }
     }
 
-parse:
-    if(d->p[d->i-1] != '\"') {
-        return 0;
-    }
+    // The goto above ensures that we only
+    // hit this when a string is not terminated
+    // correctly.
+    return 0;
 
+parse:
     if(!has_escape) {
         *value = enif_make_sub_binary(d->env, d->arg, st, (d->i - st - 1));
         return 1;
@@ -563,7 +564,7 @@ parse:
 
     if(!has_frac && !has_exp) {
         num_type = d->atoms->atom_bignum;
-    } else if(has_exp) {
+    } else if(!has_frac && has_exp) {
         num_type = d->atoms->atom_bignum_e;
     } else {
         num_type = d->atoms->atom_bigdbl;

@@ -1,6 +1,8 @@
 REBAR?=./rebar
 
+
 all: build
+
 
 clean:
 	$(REBAR) clean
@@ -9,11 +11,17 @@ clean:
 	rm -f test/*.beam
 
 
-depends:
-	@if test ! -d ./deps; then \
+distclean: clean
+	git clean -fxd
+
+
+devmarker:
+	touch .jiffy.dev
+
+
+depends: devmarker
+	@if test ! -d ./deps/proper; then \
 		$(REBAR) get-deps; \
-	else \
-		$(REBAR) update-deps; \
 	fi
 
 
@@ -35,3 +43,5 @@ check: build etap eunit
 %.beam: %.erl
 	erlc -o test/ $<
 
+
+.PHONY: all clean distclean depends build etap eunit check
